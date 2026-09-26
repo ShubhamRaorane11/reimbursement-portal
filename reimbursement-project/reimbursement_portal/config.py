@@ -38,7 +38,9 @@ class Config:
         'pool_recycle': 3600,
     }
     if 'tidbcloud.com' in DB_HOST or 'tidbcloud.com' in _db_url:
-        _engine_options['connect_args'] = {'ssl': {}}
+        _engine_options['connect_args'] = {
+            'ssl': {'check_hostname': False}
+        }
 
     SQLALCHEMY_ENGINE_OPTIONS = _engine_options
 
