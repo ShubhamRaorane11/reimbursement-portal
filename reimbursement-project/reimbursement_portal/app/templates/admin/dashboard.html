@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — ReimbursePro{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1>Organization Overview</h1>
+        <p class="subtitle">Reimbursement management and analytics</p>
+    </div>
+</div>
+
+<!-- KPI Grid -->
+<div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-card-header"><div class="kpi-card-icon primary"><i class="fas fa-file-alt"></i></div></div><div class="kpi-card-value">{{ total }}</div><div class="kpi-card-label">Total Requests</div></div>
+    <div class="kpi-card"><div class="kpi-card-header"><div class="kpi-card-icon warning"><i class="fas fa-clock"></i></div></div><div class="kpi-card-value">{{ pending }}</div><div class="kpi-card-label">Pending Approval</div></div>
+    <div class="kpi-card"><div class="kpi-card-header"><div class="kpi-card-icon success"><i class="fas fa-check-circle"></i></div></div><div class="kpi-card-value">{{ approved }}</div><div class="kpi-card-label">Approved</div></div>
+    <div class="kpi-card"><div class="kpi-card-header"><div class="kpi-card-icon danger"><i class="fas fa-times-circle"></i></div></div><div class="kpi-card-value">{{ rejected }}</div><div class="kpi-card-label">Rejected</div></div>
+    <div class="kpi-card"><div class="kpi-card-header"><div class="kpi-card-icon info"><i class="fas fa-cog"></i></div></div><div class="kpi-card-value">{{ processing }}</div><div class="kpi-card-label">Processing</div></div>
+    <div class="kpi-card"><div class="kpi-card-header"><div class="kpi-card-icon success"><i class="fas fa-money-bill-wave"></i></div></div><div class="kpi-card-value">{{ reimbursed }}</div><div class="kpi-card-label">Reimbursed</div></div>
+</div>
+
+<!-- Amount KPIs -->
+<div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: var(--spacing-xl);">
+    <div class="kpi-card"><div class="amount-card primary"><div class="amount-value">₹{{ '{:,.0f}'.format(total_requested) }}</div><div class="amount-label">Total Requested Amount</div></div></div>
+    <div class="kpi-card"><div class="amount-card success"><div class="amount-value">₹{{ '{:,.0f}'.format(total_reimbursed) }}</div><div class="amount-label">Total Reimbursed Amount</div></div></div>
+</div>
+
+<!-- Charts -->
+<div class="chart-grid">
+    <!-- Monthly Trend -->
+    <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar"></i> Monthly Reimbursement Trend</h3></div>
+        <div class="card-body"><div class="chart-container"><canvas id="monthlyChart"></canvas></div></div>
+    </div>
+
+    <!-- Category Spending -->
+    <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-pie"></i> Category-wise Spending</h3></div>
+        <div class="card-body"><div class="chart-container"><canvas id="categoryChart"></canvas></div></div>
+    </div>
+
+    <!-- Department Spending -->
+    <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar"></i> Department-wise Spending</h3></div>
+        <div class="card-body"><div class="chart-container"><canvas id="deptChart"></canvas></div></div>
+    </div>
+
+    <!-- Status Distribution -->
+    <div class="card">
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-pie"></i> Status Distribution</h3></div>
+        <div class="card-body"><div class="chart-container"><canvas id="statusChart"></canvas></div></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const monthlyAmounts = {{ monthly_amounts | tojson }};
+const monthlyValues = months.map((_, i) => monthlyAmounts[i + 1] || 0);
+
+new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+        labels: months,
+        datasets: [{
+            label: 'Amount (₹)',
+            data: monthlyValues,
+            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+            borderRadius: 6,
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => '₹' + v.toLocaleString() } } }
+    }
+});
+
+const catData = {{ category_data | tojson }};
+const catColors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+new Chart(document.getElementById('categoryChart'), {
+    type: 'doughnut',
+    data: {
+        labels: catData.map(d => d[0]),
+        datasets: [{ data: catData.map(d => d[1]), backgroundColor: catColors.slice(0, catData.length), borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+});
+
+const deptData = {{ dept_data | tojson }};
+new Chart(document.getElementById('deptChart'), {
+    type: 'bar',
+    data: {
+        labels: deptData.map(d => d[0]),
+        datasets: [{ label: 'Amount (₹)', data: deptData.map(d => d[1]),
+            backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'], borderRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { callback: v => '₹' + v.toLocaleString() } } } }
+});
+
+const statusData = {{ status_data | tojson }};
+const statusLabels = { 'DRAFT':'Draft','PENDING_APPROVAL':'Pending','NEEDS_CORRECTION':'Correction','RESUBMITTED':'Resubmitted','APPROVED':'Approved','PROCESSING':'Processing','REIMBURSED':'Reimbursed','REJECTED':'Rejected' };
+const statusColors = { 'DRAFT':'#94a3b8','PENDING_APPROVAL':'#f59e0b','NEEDS_CORRECTION':'#f59e0b','RESUBMITTED':'#3b82f6','APPROVED':'#10b981','PROCESSING':'#3b82f6','REIMBURSED':'#10b981','REJECTED':'#ef4444' };
+new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+        labels: statusData.map(d => statusLabels[d[0]] || d[0]),
+        datasets: [{ data: statusData.map(d => d[1]),
+            backgroundColor: statusData.map(d => statusColors[d[0]] || '#94a3b8'), borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+});
+</script>
+{% endblock %}

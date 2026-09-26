@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Categories — ReimbursePro{% endblock %}
+{% block page_title %}Expense Category Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Expense Categories</h3>
+        <button class="btn btn-primary btn-sm" onclick="showModal('addCatModal')"><i class="fas fa-plus"></i> Add Category</button>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead><tr><th>Name</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                    {% for c in categories %}
+                    <tr>
+                        <td><strong>{{ c.name }}</strong></td>
+                        <td>{{ c.description or '—' }}</td>
+                        <td><span class="badge badge-{% if c.status == 'ACTIVE' %}success{% else %}secondary{% endif %}">{{ c.status }}</span></td>
+                        <td>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline" data-id="{{ c.id }}" data-name="{{ c.name }}" data-desc="{{ c.description or '' }}" onclick="editCat(this)" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <form method="POST" action="{{ url_for('admin.toggle_category', cat_id=c.id) }}" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm {% if c.status == 'ACTIVE' %}btn-danger{% else %}btn-success{% endif %}" onclick="return confirm('Toggle?')">
+                                        <i class="fas fa-{% if c.status == 'ACTIVE' %}ban{% else %}check{% endif %}"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="addCatModal"><div class="modal"><div class="modal-header"><h3 class="modal-title">Add Category</h3><button class="modal-close" onclick="hideModal('addCatModal')">&times;</button></div><form method="POST" action="{{ url_for('admin.add_category') }}"><div class="modal-body"><div class="form-group"><label class="form-label">Name <span class="required">*</span></label><input type="text" class="form-control" name="name" required></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-control" name="description" rows="2"></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-outline" onclick="hideModal('addCatModal')">Cancel</button><button type="submit" class="btn btn-primary">Add</button></div></form></div></div>
+
+<div class="modal-overlay" id="editCatModal"><div class="modal"><div class="modal-header"><h3 class="modal-title">Edit Category</h3><button class="modal-close" onclick="hideModal('editCatModal')">&times;</button></div><form method="POST" id="editCatForm"><div class="modal-body"><div class="form-group"><label class="form-label">Name</label><input type="text" class="form-control" name="name" id="editCatName"></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-control" name="description" id="editCatDesc" rows="2"></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-outline" onclick="hideModal('editCatModal')">Cancel</button><button type="submit" class="btn btn-primary">Save</button></div></form></div></div>
+
+<script>
+function showModal(id) { document.getElementById(id).classList.add('active'); }
+function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+function editCat(btn) {
+    const id = btn.getAttribute('data-id');
+    const name = btn.getAttribute('data-name');
+    const desc = btn.getAttribute('data-desc');
+    document.getElementById('editCatForm').action = '/admin/categories/' + id + '/edit';
+    document.getElementById('editCatName').value = name;
+    document.getElementById('editCatDesc').value = desc;
+    showModal('editCatModal');
+}
+</script>
+{% endblock %}

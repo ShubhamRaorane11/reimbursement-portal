@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Approver Dashboard — ReimbursePro{% endblock %}
+{% block page_title %}Department Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1>Department Review</h1>
+        <p class="subtitle">{{ dept.name if dept else 'No department assigned' }}</p>
+    </div>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-card-header"><div class="kpi-card-icon warning"><i class="fas fa-clock"></i></div></div>
+        <div class="kpi-card-value">{{ pending }}</div>
+        <div class="kpi-card-label">Pending Review</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-header"><div class="kpi-card-icon success"><i class="fas fa-check-circle"></i></div></div>
+        <div class="kpi-card-value">{{ approved }}</div>
+        <div class="kpi-card-label">Approved</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-header"><div class="kpi-card-icon danger"><i class="fas fa-times-circle"></i></div></div>
+        <div class="kpi-card-value">{{ rejected }}</div>
+        <div class="kpi-card-label">Rejected</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-header"><div class="kpi-card-icon info"><i class="fas fa-exclamation-triangle"></i></div></div>
+        <div class="kpi-card-value">{{ needs_corr }}</div>
+        <div class="kpi-card-label">Needs Correction</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-header"><div class="kpi-card-icon primary"><i class="fas fa-money-bill-wave"></i></div></div>
+        <div class="kpi-card-value">₹{{ '{:,.0f}'.format(total_amount) }}</div>
+        <div class="kpi-card-label">Total Approved Amount</div>
+    </div>
+</div>
+
+<!-- Pending Requests Table -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-clock"></i> Pending Requests</h3>
+        <a href="{{ url_for('approver.pending_requests') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if pending_requests %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Employee</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Submitted</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in pending_requests %}
+                    <tr>
+                        <td><strong style="color: var(--primary);">{{ r.request_number }}</strong></td>
+                        <td>{{ r.employee.name }}</td>
+                        <td>{{ r.category.name if r.category else '—' }}</td>
+                        <td class="amount">₹{{ '{:,.2f}'.format(r.amount) }}</td>
+                        <td>{{ r.submitted_at.strftime('%d %b %Y') if r.submitted_at else '—' }}</td>
+                        <td><span class="badge badge-{{ r.status_color }}">{{ r.status_label }}</span></td>
+                        <td>
+                            <a href="{{ url_for('approver.review_request', req_id=r.id) }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> Review
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-check-circle"></i>
+            <h3>No pending requests</h3>
+            <p>All caught up! No requests need your review.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

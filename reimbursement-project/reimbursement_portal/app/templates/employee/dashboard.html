@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — ReimbursePro{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1>Welcome, {{ current_user.name }}</h1>
+        <p class="subtitle">{{ current_user.designation or 'Employee' }} &middot; {{ current_user.department.name if current_user.department else 'No Department' }}</p>
+    </div>
+    <a href="{{ url_for('employee.new_request') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> New Reimbursement
+    </a>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <div class="kpi-card-icon primary"><i class="fas fa-file-alt"></i></div>
+        </div>
+        <div class="kpi-card-value">{{ total }}</div>
+        <div class="kpi-card-label">Total Requests</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <div class="kpi-card-icon warning"><i class="fas fa-clock"></i></div>
+        </div>
+        <div class="kpi-card-value">{{ pending }}</div>
+        <div class="kpi-card-label">Pending Approval</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <div class="kpi-card-icon success"><i class="fas fa-check-circle"></i></div>
+        </div>
+        <div class="kpi-card-value">{{ approved }}</div>
+        <div class="kpi-card-label">Approved</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <div class="kpi-card-icon danger"><i class="fas fa-times-circle"></i></div>
+        </div>
+        <div class="kpi-card-value">{{ rejected }}</div>
+        <div class="kpi-card-label">Rejected</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-header">
+            <div class="kpi-card-icon success"><i class="fas fa-money-bill-wave"></i></div>
+        </div>
+        <div class="kpi-card-value">₹{{ '{:,.0f}'.format(reimbursed_amount) }}</div>
+        <div class="kpi-card-label">Total Reimbursed</div>
+    </div>
+</div>
+
+<!-- Main Grid -->
+<div class="dashboard-grid">
+    <!-- Recent Requests -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-history"></i> Recent Requests</h3>
+            <a href="{{ url_for('employee.my_requests') }}" class="btn btn-sm btn-outline">View All</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if recent %}
+            <div class="table-responsive">
+                <table class="data-table recent-table">
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in recent %}
+                        <tr onclick="window.location='{{ url_for('employee.request_detail', req_id=r.id) }}'" style="cursor:pointer;">
+                            <td><span class="request-id">{{ r.request_number }}</span></td>
+                            <td>{{ r.category.name if r.category else '—' }}</td>
+                            <td class="amount">₹{{ '{:,.2f}'.format(r.amount) }}</td>
+                            <td><span class="badge badge-{{ r.status_color }}">{{ r.status_label }}</span></td>
+                            <td>{{ r.updated_at.strftime('%d %b %Y') if r.updated_at else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h3>No requests yet</h3>
+                <p>Create your first reimbursement request to get started.</p>
+                <a href="{{ url_for('employee.new_request') }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> New Request
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar: Notifications + Chart -->
+    <div>
+        <!-- Status Chart -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-pie"></i> Request Status</h3>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="max-height: 220px;">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Notifications -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-bell"></i> Notifications</h3>
+                {% if unread_notifications > 0 %}
+                <span class="badge badge-danger">{{ unread_notifications }} new</span>
+                {% endif %}
+            </div>
+            <div class="card-body" style="padding: 0;">
+                <div class="notif-preview">
+                    {% if notifications %}
+                        {% for n in notifications %}
+                        <div class="notif-preview-item">
+                            <div class="notif-preview-dot {% if n.is_read %}read{% endif %}"></div>
+                            <div>
+                                <div style="font-size: 0.8125rem; color: var(--text-primary);">{{ n.message }}</div>
+                                <div style="font-size: 0.6875rem; color: var(--text-muted); margin-top: 0.15rem;">
+                                    {{ n.created_at.strftime('%d %b, %H:%M') }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state" style="padding: 1.5rem;">
+                            <p class="text-muted">No notifications</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Status distribution chart
+    const chartData = {{ chart_data | tojson }};
+    const statusLabels = {
+        'DRAFT': 'Draft', 'PENDING_APPROVAL': 'Pending', 'NEEDS_CORRECTION': 'Correction',
+        'RESUBMITTED': 'Resubmitted', 'APPROVED': 'Approved', 'PROCESSING': 'Processing',
+        'REIMBURSED': 'Reimbursed', 'REJECTED': 'Rejected'
+    };
+    const statusColors = {
+        'DRAFT': '#94a3b8', 'PENDING_APPROVAL': '#f59e0b', 'NEEDS_CORRECTION': '#f59e0b',
+        'RESUBMITTED': '#3b82f6', 'APPROVED': '#10b981', 'PROCESSING': '#3b82f6',
+        'REIMBURSED': '#10b981', 'REJECTED': '#ef4444'
+    };
+
+    const labels = Object.keys(chartData).map(k => statusLabels[k] || k);
+    const values = Object.values(chartData);
+    const colors = Object.keys(chartData).map(k => statusColors[k] || '#94a3b8');
+
+    if (values.length > 0) {
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 0,
+                    hoverOffset: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { size: 11, family: 'Inter' }, padding: 12 }
+                    }
+                },
+                cutout: '65%',
+            }
+        });
+    }
+</script>
+{% endblock %}

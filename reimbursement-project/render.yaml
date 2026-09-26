@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: reimbursement-portal
+    runtime: python
+    buildCommand: "pip install -r reimbursement_portal/requirements.txt"
+    startCommand: "gunicorn --chdir reimbursement_portal run:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_PORT
+        value: "3306"

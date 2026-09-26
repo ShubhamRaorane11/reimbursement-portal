@@ -1,0 +1,243 @@
+/* ============================================================
+   DASHBOARD CSS — Dashboard-specific styles
+   ============================================================ */
+
+/* ── Dashboard Header ───────────────────────────────────── */
+.dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-xl);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.dashboard-header h1 {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.dashboard-header .subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-top: 0.15rem;
+}
+
+
+/* ── Dashboard Grid ─────────────────────────────────────── */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--spacing-lg);
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ── Recent Table ───────────────────────────────────────── */
+.recent-table .data-table td {
+    font-size: var(--font-size-sm);
+}
+
+.recent-table .request-id {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+
+/* ── Amount Display ─────────────────────────────────────── */
+.amount {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.amount-large {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--primary);
+    font-variant-numeric: tabular-nums;
+}
+
+
+/* ── Quick Actions ──────────────────────────────────────── */
+.quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-sm);
+}
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-card);
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+}
+
+.quick-action-btn:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-sm);
+    color: var(--primary);
+}
+
+.quick-action-btn i {
+    font-size: 1.2rem;
+    color: var(--primary);
+}
+
+
+/* ── Notification preview in dashboard ──────────────────── */
+.notif-preview {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.notif-preview-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: var(--font-size-sm);
+}
+
+.notif-preview-item:last-child {
+    border-bottom: none;
+}
+
+.notif-preview-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    flex-shrink: 0;
+    margin-top: 0.4rem;
+}
+
+.notif-preview-dot.read {
+    background: var(--border-color);
+}
+
+
+/* ── Status progress tracker ────────────────────────────── */
+.status-tracker {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: var(--spacing-md) 0;
+}
+
+.status-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+}
+
+.status-step::after {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: var(--border-color);
+    z-index: 0;
+}
+
+.status-step:last-child::after {
+    display: none;
+}
+
+.status-step.completed::after {
+    background: var(--success);
+}
+
+.status-step.active::after {
+    background: linear-gradient(to right, var(--success) 50%, var(--border-color) 50%);
+}
+
+.status-step-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xs);
+    z-index: 1;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    color: var(--text-muted);
+}
+
+.status-step.completed .status-step-icon {
+    background: var(--success);
+    border-color: var(--success);
+    color: #fff;
+}
+
+.status-step.active .status-step-icon {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+.status-step.rejected .status-step-icon {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+
+.status-step-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.status-step.completed .status-step-label,
+.status-step.active .status-step-label {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+
+/* ── Finance amount cards ───────────────────────────────── */
+.amount-card {
+    text-align: center;
+    padding: var(--spacing-lg);
+}
+
+.amount-card .amount-value {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.amount-card .amount-label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.amount-card.success .amount-value { color: var(--success); }
+.amount-card.warning .amount-value { color: var(--warning); }
+.amount-card.info .amount-value { color: var(--info); }
+.amount-card.primary .amount-value { color: var(--primary); }

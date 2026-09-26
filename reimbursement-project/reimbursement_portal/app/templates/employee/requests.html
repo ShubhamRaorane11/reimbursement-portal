@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}My Reimbursements — ReimbursePro{% endblock %}
+{% block page_title %}My Reimbursements{% endblock %}
+
+{% block content %}
+<!-- Filter Bar -->
+<div class="card">
+    <div class="card-body">
+        <form method="GET" class="filter-bar">
+            <div class="search-input">
+                <i class="fas fa-search"></i>
+                <input type="text" class="form-control" name="search" placeholder="Search by ID or description..." value="{{ search }}">
+            </div>
+            <select class="form-control" name="status">
+                <option value="">All Statuses</option>
+                <option value="DRAFT" {% if status_filter == 'DRAFT' %}selected{% endif %}>Draft</option>
+                <option value="PENDING_APPROVAL" {% if status_filter == 'PENDING_APPROVAL' %}selected{% endif %}>Pending Approval</option>
+                <option value="NEEDS_CORRECTION" {% if status_filter == 'NEEDS_CORRECTION' %}selected{% endif %}>Needs Correction</option>
+                <option value="APPROVED" {% if status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
+                <option value="PROCESSING" {% if status_filter == 'PROCESSING' %}selected{% endif %}>Processing</option>
+                <option value="REIMBURSED" {% if status_filter == 'REIMBURSED' %}selected{% endif %}>Reimbursed</option>
+                <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+            </select>
+            <select class="form-control" name="category">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if category_filter == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> Filter</button>
+            <a href="{{ url_for('employee.my_requests') }}" class="btn btn-outline btn-sm">Clear</a>
+        </form>
+    </div>
+</div>
+
+<!-- Requests Table -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Reimbursement Requests</h3>
+        <a href="{{ url_for('employee.new_request') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> New Request
+        </a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if requests %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Submitted</th>
+                        <th>Expense Date</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Last Updated</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in requests %}
+                    <tr>
+                        <td><strong style="color: var(--primary);">{{ r.request_number }}</strong></td>
+                        <td>{{ r.submitted_at.strftime('%d %b %Y') if r.submitted_at else '—' }}</td>
+                        <td>{{ r.expense_date.strftime('%d %b %Y') if r.expense_date else '—' }}</td>
+                        <td>{{ r.category.name if r.category else '—' }}</td>
+                        <td class="amount">₹{{ '{:,.2f}'.format(r.amount) }}</td>
+                        <td><span class="badge badge-{{ r.status_color }}">{{ r.status_label }}</span></td>
+                        <td>{{ r.updated_at.strftime('%d %b %Y') if r.updated_at else '—' }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('employee.request_detail', req_id=r.id) }}" class="btn btn-sm btn-outline" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if r.is_editable %}
+                                <a href="{{ url_for('employee.edit_request', req_id=r.id) }}" class="btn btn-sm btn-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination.pages > 1 %}
+        <div class="pagination" style="padding: 1rem;">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('employee.my_requests', page=pagination.prev_num, status=status_filter, category=category_filter, search=search) }}">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if p %}
+                    <a href="{{ url_for('employee.my_requests', page=p, status=status_filter, category=category_filter, search=search) }}"
+                       class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>
+                {% else %}
+                    <span>...</span>
+                {% endif %}
+            {% endfor %}
+            {% if pagination.has_next %}
+            <a href="{{ url_for('employee.my_requests', page=pagination.next_num, status=status_filter, category=category_filter, search=search) }}">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <h3>No requests found</h3>
+            <p>{% if search or status_filter or category_filter %}Try adjusting your filters.{% else %}Create your first reimbursement request.{% endif %}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

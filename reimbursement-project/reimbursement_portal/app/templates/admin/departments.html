@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Departments — ReimbursePro{% endblock %}
+{% block page_title %}Department Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Departments</h3>
+        <button class="btn btn-primary btn-sm" onclick="showModal('addDeptModal')"><i class="fas fa-plus"></i> Add Department</button>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Name</th><th>Description</th><th>Approver</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for d in departments %}
+                    <tr>
+                        <td><strong>{{ d.name }}</strong></td>
+                        <td>{{ d.description or '—' }}</td>
+                        <td>{{ d.approver.name if d.approver else '—' }}</td>
+                        <td><span class="badge badge-{% if d.status == 'ACTIVE' %}success{% else %}secondary{% endif %}">{{ d.status }}</span></td>
+                        <td>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline" data-id="{{ d.id }}" data-name="{{ d.name }}" data-desc="{{ d.description or '' }}" data-approver="{{ d.approver_id or '' }}" onclick="editDept(this)" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <form method="POST" action="{{ url_for('admin.toggle_department', dept_id=d.id) }}" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm {% if d.status == 'ACTIVE' %}btn-danger{% else %}btn-success{% endif %}" onclick="return confirm('Toggle department status?')">
+                                        <i class="fas fa-{% if d.status == 'ACTIVE' %}ban{% else %}check{% endif %}"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal-overlay" id="addDeptModal">
+    <div class="modal">
+        <div class="modal-header"><h3 class="modal-title">Add Department</h3><button class="modal-close" onclick="hideModal('addDeptModal')">&times;</button></div>
+        <form method="POST" action="{{ url_for('admin.add_department') }}">
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Name <span class="required">*</span></label><input type="text" class="form-control" name="name" required></div>
+                <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" name="description" rows="2"></textarea></div>
+                <div class="form-group"><label class="form-label">Approver</label><select class="form-control" name="approver_id"><option value="">None</option>{% for u in users %}<option value="{{ u.id }}">{{ u.name }} ({{ u.employee_id }})</option>{% endfor %}</select></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="hideModal('addDeptModal')">Cancel</button><button type="submit" class="btn btn-primary">Add</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editDeptModal">
+    <div class="modal">
+        <div class="modal-header"><h3 class="modal-title">Edit Department</h3><button class="modal-close" onclick="hideModal('editDeptModal')">&times;</button></div>
+        <form method="POST" id="editDeptForm">
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Name</label><input type="text" class="form-control" name="name" id="editDeptName"></div>
+                <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" name="description" id="editDeptDesc" rows="2"></textarea></div>
+                <div class="form-group"><label class="form-label">Approver</label><select class="form-control" name="approver_id" id="editDeptApprover"><option value="">None</option>{% for u in users %}<option value="{{ u.id }}">{{ u.name }} ({{ u.employee_id }})</option>{% endfor %}</select></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="hideModal('editDeptModal')">Cancel</button><button type="submit" class="btn btn-primary">Save</button></div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showModal(id) { document.getElementById(id).classList.add('active'); }
+function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+function editDept(btn) {
+    const id = btn.getAttribute('data-id');
+    const name = btn.getAttribute('data-name');
+    const desc = btn.getAttribute('data-desc');
+    const approver = btn.getAttribute('data-approver');
+    document.getElementById('editDeptForm').action = '/admin/departments/' + id + '/edit';
+    document.getElementById('editDeptName').value = name;
+    document.getElementById('editDeptDesc').value = desc;
+    document.getElementById('editDeptApprover').value = approver || '';
+    showModal('editDeptModal');
+}
+</script>
+{% endblock %}

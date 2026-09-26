@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Finance Dashboard — ReimbursePro{% endblock %}
+{% block page_title %}Finance Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1>Finance Overview</h1>
+        <p class="subtitle">Payment processing and reimbursement tracking</p>
+    </div>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-card-header"><div class="kpi-card-icon success"><i class="fas fa-check-circle"></i></div></div>
+        <div class="kpi-card-value">{{ approved_count }}</div>
+        <div class="kpi-card-label">Awaiting Payment</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-header"><div class="kpi-card-icon info"><i class="fas fa-cog"></i></div></div>
+        <div class="kpi-card-value">{{ processing_count }}</div>
+        <div class="kpi-card-label">Processing</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-header"><div class="kpi-card-icon primary"><i class="fas fa-money-bill-wave"></i></div></div>
+        <div class="kpi-card-value">{{ reimbursed_count }}</div>
+        <div class="kpi-card-label">Reimbursed</div>
+    </div>
+</div>
+
+<!-- Amount Cards -->
+<div class="kpi-grid" style="margin-bottom: var(--spacing-xl);">
+    <div class="kpi-card">
+        <div class="amount-card success">
+            <div class="amount-value">₹{{ '{:,.0f}'.format(approved_amount) }}</div>
+            <div class="amount-label">Total Approved Amount</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="amount-card info">
+            <div class="amount-value">₹{{ '{:,.0f}'.format(processing_amount) }}</div>
+            <div class="amount-label">Processing Amount</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="amount-card primary">
+            <div class="amount-value">₹{{ '{:,.0f}'.format(reimbursed_amount) }}</div>
+            <div class="amount-label">Total Reimbursed</div>
+        </div>
+    </div>
+</div>
+
+<!-- Approved Requests -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-check-circle"></i> Approved — Awaiting Payment</h3>
+        <a href="{{ url_for('finance.approved_list') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if approved_requests %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Amount</th>
+                        <th>Approved On</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in approved_requests %}
+                    <tr>
+                        <td><strong style="color: var(--primary);">{{ r.request_number }}</strong></td>
+                        <td>{{ r.employee.name }}</td>
+                        <td>{{ r.department.name if r.department else '—' }}</td>
+                        <td class="amount">₹{{ '{:,.2f}'.format(r.amount) }}</td>
+                        <td>{{ r.updated_at.strftime('%d %b %Y') if r.updated_at else '—' }}</td>
+                        <td><a href="{{ url_for('finance.payment_view', req_id=r.id) }}" class="btn btn-sm btn-primary"><i class="fas fa-credit-card"></i> Process</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-check-circle"></i><h3>No pending payments</h3></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

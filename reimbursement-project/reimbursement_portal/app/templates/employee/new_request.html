@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}{% if editing %}Edit Request — ReimbursePro{% else %}New Reimbursement — ReimbursePro{% endif %}{% endblock %}
+{% block page_title %}{% if editing %}Edit Request {{ reimb.request_number }}{% else %}New Reimbursement Request{% endif %}{% endblock %}
+
+{% block content %}
+<form method="POST" enctype="multipart/form-data" id="reimbursementForm">
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-lg);">
+        <!-- Left Column: Form -->
+        <div>
+            <!-- Employee Info (read-only) -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-user"></i> Employee Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Employee Name</label>
+                            <input type="text" class="form-control" value="{{ current_user.name }}" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" value="{{ current_user.employee_id }}" readonly>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Department</label>
+                            <input type="text" class="form-control" value="{{ current_user.department.name if current_user.department else 'N/A' }}" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Designation</label>
+                            <input type="text" class="form-control" value="{{ current_user.designation or 'N/A' }}" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expense Info -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-receipt"></i> Expense Information</h3>
+                </div>
+                <div class="card-body">
+                    {% if editing and reimb.status == 'NEEDS_CORRECTION' and reimb.correction_comment %}
+                    <div style="background: var(--warning-bg); border: 1px solid var(--warning-border); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i>
+                            <strong style="color: #92400e;">Correction Required</strong>
+                        </div>
+                        <p style="font-size: 0.875rem; color: #92400e;">{{ reimb.correction_comment }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="category_id">Expense Category <span class="required">*</span></label>
+                            <select class="form-control" id="category_id" name="category_id" required>
+                                <option value="">Select Category</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if (editing and reimb.category_id == cat.id) or (form.get('category_id') == cat.id|string) %}selected{% endif %}>
+                                    {{ cat.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="expense_date">Expense Date <span class="required">*</span></label>
+                            <input type="date" class="form-control" id="expense_date" name="expense_date"
+                                   value="{{ reimb.expense_date.strftime('%Y-%m-%d') if editing and reimb.expense_date else form.get('expense_date', '') }}"
+                                   required max="{{ now().strftime('%Y-%m-%d') if now is defined else '' }}">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="amount">Amount (₹) <span class="required">*</span></label>
+                            <input type="number" class="form-control" id="amount" name="amount"
+                                   value="{{ reimb.amount if editing else form.get('amount', '') }}"
+                                   placeholder="0.00" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="payment_method">Payment Method</label>
+                            <select class="form-control" id="payment_method" name="payment_method">
+                                <option value="">Select Method</option>
+                                {% set pm = reimb.payment_method if editing else form.get('payment_method', '') %}
+                                <option value="Cash" {% if pm == 'Cash' %}selected{% endif %}>Cash</option>
+                                <option value="Personal Card" {% if pm == 'Personal Card' %}selected{% endif %}>Personal Card</option>
+                                <option value="Company Card" {% if pm == 'Company Card' %}selected{% endif %}>Company Card</option>
+                                <option value="UPI" {% if pm == 'UPI' %}selected{% endif %}>UPI</option>
+                                <option value="Bank Transfer" {% if pm == 'Bank Transfer' %}selected{% endif %}>Bank Transfer</option>
+                                <option value="Auto-Debit" {% if pm == 'Auto-Debit' %}selected{% endif %}>Auto-Debit</option>
+                                <option value="Other" {% if pm == 'Other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="description">Purpose / Description <span class="required">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Describe the expense purpose..." required>{{ reimb.description if editing else form.get('description', '') }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Upload -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-paperclip"></i> Upload Bills / Receipts</h3>
+                </div>
+                <div class="card-body">
+                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p><strong>Click to upload</strong> or drag and drop</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted);">PDF, JPG, JPEG, PNG (max 16 MB each)</p>
+                    </div>
+                    <input type="file" id="fileInput" name="documents" multiple
+                           accept=".pdf,.jpg,.jpeg,.png" style="display: none;"
+                           onchange="handleFileSelect(this.files)">
+
+                    <!-- File List -->
+                    <div class="file-list" id="fileList">
+                        {% if editing and documents %}
+                            {% for doc in documents %}
+                            <div class="file-item" data-doc-id="{{ doc.id }}">
+                                <i class="fas {% if doc.is_pdf %}fa-file-pdf{% else %}fa-file-image{% endif %}" style="font-size: 1.2rem; color: var(--primary);"></i>
+                                <div class="file-item-info">
+                                    <div class="file-item-name">{{ doc.original_filename }}</div>
+                                    <div class="file-item-size">{{ doc.size_display }}</div>
+                                </div>
+                                <a href="{{ url_for('employee.view_document', doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button type="button" class="file-item-remove" onclick="removeExistingDoc({{ doc.id }}, this)" title="Remove">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Hidden field for OCR data -->
+                    <input type="hidden" name="ocr_extracted_data" id="ocrExtractedData" value="">
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: OCR Results & Actions -->
+        <div>
+            <!-- OCR Results Panel -->
+            <div class="card" id="ocrPanel" style="display: none;">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-magic"></i> OCR Extracted Data</h3>
+                </div>
+                <div class="card-body">
+                    <div style="background: var(--info-bg); border: 1px solid var(--info-border); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.8125rem; color: #1e40af;">
+                        <i class="fas fa-info-circle"></i>
+                        Review and correct the extracted data below. All fields are editable.
+                    </div>
+
+                    <div id="ocrFields">
+                        <div class="ocr-field">
+                            <div class="ocr-field-label">Vendor Name</div>
+                            <input type="text" class="form-control" id="ocr_vendor" placeholder="Not detected">
+                        </div>
+                        <div class="ocr-field">
+                            <div class="ocr-field-label">Invoice Number</div>
+                            <input type="text" class="form-control" id="ocr_invoice_number" placeholder="Not detected">
+                        </div>
+                        <div class="ocr-field">
+                            <div class="ocr-field-label">Invoice Date</div>
+                            <input type="text" class="form-control" id="ocr_invoice_date" placeholder="Not detected">
+                        </div>
+                        <div class="ocr-field">
+                            <div class="ocr-field-label">Subtotal</div>
+                            <input type="text" class="form-control" id="ocr_subtotal" placeholder="Not detected">
+                        </div>
+                        <div class="ocr-field">
+                            <div class="ocr-field-label">Tax / GST</div>
+                            <input type="text" class="form-control" id="ocr_tax" placeholder="Not detected">
+                        </div>
+                        <div class="ocr-field">
+                            <div class="ocr-field-label">Tax Details</div>
+                            <input type="text" class="form-control" id="ocr_tax_details" placeholder="Not detected" readonly style="font-size: 0.75rem;">
+                        </div>
+                        <div class="ocr-field">
+                            <div class="ocr-field-label">Total Amount</div>
+                            <input type="text" class="form-control" id="ocr_total" placeholder="Not detected" style="font-weight: 600;">
+                        </div>
+                        <div class="ocr-field">
+                            <div class="ocr-field-label">Description</div>
+                            <input type="text" class="form-control" id="ocr_description" placeholder="Not detected">
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="useOcrData()">
+                            <i class="fas fa-check"></i> Use Extracted Data
+                        </button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="clearOcrData()">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OCR Loading -->
+            <div class="card" id="ocrLoading" style="display: none;">
+                <div class="card-body" style="text-align: center; padding: 2rem;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--primary); margin-bottom: 0.75rem;"></i>
+                    <p style="font-size: 0.875rem; color: var(--text-secondary);">Processing document with OCR...</p>
+                </div>
+            </div>
+
+            <!-- OCR Error -->
+            <div class="card" id="ocrError" style="display: none;">
+                <div class="card-body" style="text-align: center; padding: 1.5rem;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem; color: var(--warning); margin-bottom: 0.75rem;"></i>
+                    <p style="font-size: 0.875rem; color: var(--text-secondary);" id="ocrErrorMsg">
+                        Could not extract information. Please enter details manually.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="card">
+                <div class="card-body">
+                    <button type="submit" name="action" value="submit" class="btn btn-primary w-100" style="margin-bottom: 0.75rem;">
+                        <i class="fas fa-paper-plane"></i> {% if editing and reimb.status == 'NEEDS_CORRECTION' %}Resubmit{% else %}Submit Request{% endif %}
+                    </button>
+                    <button type="submit" name="action" value="draft" class="btn btn-outline w-100">
+                        <i class="fas fa-save"></i> Save as Draft
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/employee.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ocr.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Review {{ reimb.request_number }} — ReimbursePro{% endblock %}
+{% block page_title %}Review Request{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="card">
+    <div class="card-body" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="font-size: 1.25rem; font-weight: 700;">{{ reimb.request_number }}</h2>
+            <p style="font-size: 0.875rem; color: var(--text-secondary);">
+                Submitted {{ reimb.submitted_at.strftime('%d %b %Y at %H:%M') if reimb.submitted_at else '—' }}
+            </p>
+        </div>
+        <span class="badge badge-{{ reimb.status_color }}" style="font-size: 0.875rem; padding: 0.4rem 1rem;">{{ reimb.status_label }}</span>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-lg);">
+    <div>
+        <!-- Employee Info -->
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-user"></i> Employee Information</h3></div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">{{ reimb.employee.name }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Employee ID</div><div class="detail-value">{{ reimb.employee.employee_id }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Department</div><div class="detail-value">{{ reimb.department.name if reimb.department else '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Designation</div><div class="detail-value">{{ reimb.employee.designation or '—' }}</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense Info -->
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-receipt"></i> Expense Details</h3></div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-item"><div class="detail-label">Category</div><div class="detail-value">{{ reimb.category.name if reimb.category else '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Expense Date</div><div class="detail-value">{{ reimb.expense_date.strftime('%d %b %Y') if reimb.expense_date else '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Amount</div><div class="detail-value amount">₹{{ '{:,.2f}'.format(reimb.amount) }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Payment Method</div><div class="detail-value">{{ reimb.payment_method or '—' }}</div></div>
+                </div>
+                <div class="detail-item" style="margin-top: 0.5rem;"><div class="detail-label">Purpose</div><div class="detail-value">{{ reimb.description or '—' }}</div></div>
+            </div>
+        </div>
+
+        <!-- Documents -->
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-paperclip"></i> Documents</h3></div>
+            <div class="card-body">
+                {% if documents %}
+                    {% for doc in documents %}
+                    <div class="file-item">
+                        <i class="fas {% if doc.is_pdf %}fa-file-pdf{% else %}fa-file-image{% endif %}" style="font-size: 1.2rem; color: var(--primary);"></i>
+                        <div class="file-item-info">
+                            <div class="file-item-name">{{ doc.original_filename }}</div>
+                            <div class="file-item-size">{{ doc.size_display }}</div>
+                        </div>
+                        <a href="{{ url_for('employee.view_document', doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline"><i class="fas fa-eye"></i> View</a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <p class="text-muted">No documents uploaded.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- OCR Data -->
+        {% if ocr_results %}
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-magic"></i> OCR Extracted Data</h3></div>
+            <div class="card-body">
+                <p style="font-size: 0.75rem; color: var(--text-muted); font-style: italic; margin-bottom: 1rem;">
+                    <i class="fas fa-info-circle"></i> This data was automatically extracted from the uploaded document. The original bill is the authoritative source.
+                </p>
+                {% for ocr in ocr_results %}
+                {% if ocr.extracted_data %}
+                <div class="detail-grid">
+                    {% for key, value in ocr.extracted_data.items() %}
+                    {% if value %}
+                    <div class="detail-item"><div class="detail-label">{{ key.replace('_', ' ').title() }}</div><div class="detail-value">{{ value }}</div></div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Actions + Timeline -->
+    <div>
+        <!-- Action Buttons -->
+        {% if reimb.status in ('PENDING_APPROVAL', 'RESUBMITTED') %}
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-gavel"></i> Review Actions</h3></div>
+            <div class="card-body">
+                <!-- Approve -->
+                <button type="button" class="btn btn-success w-100" style="margin-bottom: 0.5rem;" onclick="showModal('approveModal')">
+                    <i class="fas fa-check"></i> Approve
+                </button>
+                <!-- Request Correction -->
+                <button type="button" class="btn btn-warning w-100" style="margin-bottom: 0.5rem;" onclick="showModal('correctionModal')">
+                    <i class="fas fa-exclamation-triangle"></i> Request Correction
+                </button>
+                <!-- Reject -->
+                <button type="button" class="btn btn-danger w-100" onclick="showModal('rejectModal')">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Timeline -->
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-history"></i> Approval History</h3></div>
+            <div class="card-body">
+                {% if reimb.approval_history %}
+                <div class="timeline">
+                    {% for entry in reimb.approval_history|reverse %}
+                    <div class="timeline-item">
+                        <div class="timeline-dot {{ entry.action_color }}"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">{{ entry.action_label }}</div>
+                            <div class="timeline-meta">{{ entry.performer.name if entry.performer else 'System' }} &middot; {{ entry.created_at.strftime('%d %b, %H:%M') }}</div>
+                            {% if entry.comments %}<div class="timeline-comment">{{ entry.comments }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No history.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <a href="{{ url_for('approver.pending_requests') }}" class="btn btn-outline w-100"><i class="fas fa-arrow-left"></i> Back</a>
+    </div>
+</div>
+
+<!-- Approve Modal -->
+<div class="modal-overlay" id="approveModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-check-circle" style="color: var(--success);"></i> Approve Request</h3>
+            <button class="modal-close" onclick="hideModal('approveModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('approver.approve', req_id=reimb.id) }}">
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem;">Approve <strong>{{ reimb.request_number }}</strong> for <strong>₹{{ '{:,.2f}'.format(reimb.amount) }}</strong>?</p>
+                <div class="form-group">
+                    <label class="form-label">Comments (optional)</label>
+                    <textarea class="form-control" name="comments" rows="3" placeholder="Add a comment..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="hideModal('approveModal')">Cancel</button>
+                <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Confirm Approve</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal-overlay" id="rejectModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-times-circle" style="color: var(--danger);"></i> Reject Request</h3>
+            <button class="modal-close" onclick="hideModal('rejectModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('approver.reject', req_id=reimb.id) }}">
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem;">Reject <strong>{{ reimb.request_number }}</strong>?</p>
+                <div class="form-group">
+                    <label class="form-label">Rejection Reason <span class="required">*</span></label>
+                    <textarea class="form-control" name="reason" rows="3" placeholder="Explain why this request is being rejected..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="hideModal('rejectModal')">Cancel</button>
+                <button type="submit" class="btn btn-danger"><i class="fas fa-times"></i> Confirm Reject</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Correction Modal -->
+<div class="modal-overlay" id="correctionModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> Request Correction</h3>
+            <button class="modal-close" onclick="hideModal('correctionModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('approver.request_correction', req_id=reimb.id) }}">
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem;">Request correction for <strong>{{ reimb.request_number }}</strong>?</p>
+                <div class="form-group">
+                    <label class="form-label">Correction Comment <span class="required">*</span></label>
+                    <textarea class="form-control" name="comment" rows="3" placeholder="Describe what needs to be corrected..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="hideModal('correctionModal')">Cancel</button>
+                <button type="submit" class="btn btn-warning"><i class="fas fa-exclamation-triangle"></i> Request Correction</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showModal(id) { document.getElementById(id).classList.add('active'); }
+function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+</script>
+{% endblock %}

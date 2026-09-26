@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Settings — ReimbursePro{% endblock %}
+{% block page_title %}System Settings{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h3 class="card-title"><i class="fas fa-cog"></i> System Information</h3></div>
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><div class="detail-label">Application</div><div class="detail-value">ReimbursePro</div></div>
+            <div class="detail-item"><div class="detail-label">Version</div><div class="detail-value">1.0.0</div></div>
+            <div class="detail-item"><div class="detail-label">Framework</div><div class="detail-value">Flask + SQLAlchemy</div></div>
+            <div class="detail-item"><div class="detail-label">Database</div><div class="detail-value">MySQL (reimbursement_portal)</div></div>
+            <div class="detail-item"><div class="detail-label">OCR Engine</div><div class="detail-value">Tesseract (pytesseract)</div></div>
+            <div class="detail-item"><div class="detail-label">Max Upload Size</div><div class="detail-value">16 MB</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title"><i class="fas fa-shield-alt"></i> Security Settings</h3></div>
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item"><div class="detail-label">Session Timeout</div><div class="detail-value">8 hours</div></div>
+            <div class="detail-item"><div class="detail-label">Password Hashing</div><div class="detail-value">Werkzeug (scrypt)</div></div>
+            <div class="detail-item"><div class="detail-label">Allowed File Types</div><div class="detail-value">PDF, JPG, JPEG, PNG</div></div>
+        </div>
+        <p style="margin-top: 1rem; font-size: 0.8125rem; color: var(--text-muted);">
+            <i class="fas fa-info-circle"></i> To change system settings, update the <code>.env</code> file and restart the application.
+        </p>
+    </div>
+</div>
+{% endblock %}

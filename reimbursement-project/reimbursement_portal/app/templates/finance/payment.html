@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Process {{ reimb.request_number }} — ReimbursePro{% endblock %}
+{% block page_title %}Payment Processing{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="card">
+    <div class="card-body" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="font-size: 1.25rem; font-weight: 700;">{{ reimb.request_number }}</h2>
+            <p style="font-size: 0.875rem; color: var(--text-secondary);">{{ reimb.employee.name }} &middot; {{ reimb.department.name if reimb.department else '' }}</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-{{ reimb.status_color }}" style="font-size: 0.875rem; padding: 0.4rem 1rem;">{{ reimb.status_label }}</span>
+            <span class="detail-value amount" style="font-size: 1.25rem;">₹{{ '{:,.2f}'.format(reimb.amount) }}</span>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-lg);">
+    <div>
+        <!-- Expense Details -->
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-receipt"></i> Expense Details</h3></div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-item"><div class="detail-label">Employee</div><div class="detail-value">{{ reimb.employee.name }} ({{ reimb.employee.employee_id }})</div></div>
+                    <div class="detail-item"><div class="detail-label">Department</div><div class="detail-value">{{ reimb.department.name if reimb.department else '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Category</div><div class="detail-value">{{ reimb.category.name if reimb.category else '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Expense Date</div><div class="detail-value">{{ reimb.expense_date.strftime('%d %b %Y') if reimb.expense_date else '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Payment Method</div><div class="detail-value">{{ reimb.payment_method or '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Amount</div><div class="detail-value amount">₹{{ '{:,.2f}'.format(reimb.amount) }}</div></div>
+                </div>
+                <div class="detail-item" style="margin-top: 0.5rem;"><div class="detail-label">Purpose</div><div class="detail-value">{{ reimb.description or '—' }}</div></div>
+            </div>
+        </div>
+
+        <!-- Documents -->
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-paperclip"></i> Documents</h3></div>
+            <div class="card-body">
+                {% for doc in documents %}
+                <div class="file-item">
+                    <i class="fas {% if doc.is_pdf %}fa-file-pdf{% else %}fa-file-image{% endif %}" style="font-size: 1.2rem; color: var(--primary);"></i>
+                    <div class="file-item-info"><div class="file-item-name">{{ doc.original_filename }}</div><div class="file-item-size">{{ doc.size_display }}</div></div>
+                    <a href="{{ url_for('employee.view_document', doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline"><i class="fas fa-eye"></i> View</a>
+                </div>
+                {% endfor %}
+                {% if not documents %}<p class="text-muted">No documents.</p>{% endif %}
+            </div>
+        </div>
+
+        <!-- Payment Info (if already reimbursed) -->
+        {% if reimb.payment %}
+        <div class="card" style="border-color: var(--success-border);">
+            <div class="card-header" style="background: var(--success-bg);"><h3 class="card-title" style="color: var(--success);"><i class="fas fa-money-bill-wave"></i> Payment Completed</h3></div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-item"><div class="detail-label">Amount Paid</div><div class="detail-value amount">₹{{ '{:,.2f}'.format(reimb.payment.amount) }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Payment Date</div><div class="detail-value">{{ reimb.payment.payment_date.strftime('%d %b %Y') }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Method</div><div class="detail-value">{{ reimb.payment.payment_method }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Reference</div><div class="detail-value">{{ reimb.payment.transaction_reference or '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Processed By</div><div class="detail-value">{{ reimb.payment.processor.name if reimb.payment.processor else '—' }}</div></div>
+                </div>
+                {% if reimb.payment.remarks %}<div class="detail-item" style="margin-top: 0.5rem;"><div class="detail-label">Remarks</div><div class="detail-value">{{ reimb.payment.remarks }}</div></div>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div>
+        <!-- Action: Start Processing -->
+        {% if reimb.status == 'APPROVED' %}
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-cog"></i> Process Payment</h3></div>
+            <div class="card-body">
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">Start processing this approved request.</p>
+                <form method="POST" action="{{ url_for('finance.start_processing', req_id=reimb.id) }}">
+                    <button type="submit" class="btn btn-primary w-100" onclick="return confirm('Start processing payment for {{ reimb.request_number }}?')">
+                        <i class="fas fa-play"></i> Start Processing
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Action: Complete Payment -->
+        {% if reimb.status == 'PROCESSING' %}
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-money-bill-wave"></i> Complete Payment</h3></div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('finance.complete_payment', req_id=reimb.id) }}">
+                    <div class="form-group">
+                        <label class="form-label">Amount (₹) <span class="required">*</span></label>
+                        <input type="number" class="form-control" name="amount" value="{{ reimb.amount }}" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Payment Date <span class="required">*</span></label>
+                        <input type="date" class="form-control" name="payment_date" value="{{ now().strftime('%Y-%m-%d') if now is defined else '' }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Payment Method <span class="required">*</span></label>
+                        <select class="form-control" name="payment_method" required>
+                            <option value="">Select</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="NEFT">NEFT</option>
+                            <option value="RTGS">RTGS</option>
+                            <option value="IMPS">IMPS</option>
+                            <option value="UPI">UPI</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Direct Deposit">Direct Deposit</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Transaction Reference</label>
+                        <input type="text" class="form-control" name="transaction_reference" placeholder="e.g. TXN-2026-12345">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Remarks</label>
+                        <textarea class="form-control" name="remarks" rows="2" placeholder="Finance remarks..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100" onclick="return confirm('Complete payment and mark as reimbursed?')">
+                        <i class="fas fa-check-circle"></i> Mark as Reimbursed
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Timeline -->
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-history"></i> History</h3></div>
+            <div class="card-body">
+                {% if reimb.approval_history %}
+                <div class="timeline">
+                    {% for entry in reimb.approval_history|reverse %}
+                    <div class="timeline-item">
+                        <div class="timeline-dot {{ entry.action_color }}"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">{{ entry.action_label }}</div>
+                            <div class="timeline-meta">{{ entry.performer.name if entry.performer else 'System' }} &middot; {{ entry.created_at.strftime('%d %b, %H:%M') }}</div>
+                            {% if entry.comments %}<div class="timeline-comment">{{ entry.comments }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <a href="{{ url_for('finance.dashboard') }}" class="btn btn-outline w-100"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

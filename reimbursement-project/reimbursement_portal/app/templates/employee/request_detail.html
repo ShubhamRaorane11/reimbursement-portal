@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}{{ reimb.request_number }} — ReimbursePro{% endblock %}
+{% block page_title %}Request Details{% endblock %}
+
+{% block content %}
+<!-- Request Summary Header -->
+<div class="card">
+    <div class="card-body">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">{{ reimb.request_number }}</h2>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                    Submitted {{ reimb.submitted_at.strftime('%d %b %Y at %H:%M') if reimb.submitted_at else 'Not submitted' }}
+                    &middot; Last updated {{ reimb.updated_at.strftime('%d %b %Y at %H:%M') if reimb.updated_at else '—' }}
+                </p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span class="badge badge-{{ reimb.status_color }}" style="font-size: 0.875rem; padding: 0.4rem 1rem;">
+                    {{ reimb.status_label }}
+                </span>
+                {% if reimb.is_editable %}
+                <a href="{{ url_for('employee.edit_request', req_id=reimb.id) }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                {% endif %}
+                {% if reimb.status == 'DRAFT' %}
+                <form method="POST" action="{{ url_for('employee.submit_request', req_id=reimb.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Submit this request for approval?')">
+                        <i class="fas fa-paper-plane"></i> Submit
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Tracker -->
+<div class="card">
+    <div class="card-body">
+        {% set statuses = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'PROCESSING', 'REIMBURSED'] %}
+        {% set status_order = {'DRAFT': 0, 'PENDING_APPROVAL': 1, 'NEEDS_CORRECTION': 1, 'RESUBMITTED': 1, 'APPROVED': 2, 'PROCESSING': 3, 'REIMBURSED': 4, 'REJECTED': -1} %}
+        {% set current_step = status_order.get(reimb.status, 0) %}
+
+        {% if reimb.status == 'REJECTED' %}
+        <div class="status-tracker">
+            <div class="status-step completed"><div class="status-step-icon"><i class="fas fa-check"></i></div><div class="status-step-label">Submitted</div></div>
+            <div class="status-step completed"><div class="status-step-icon"><i class="fas fa-check"></i></div><div class="status-step-label">Reviewed</div></div>
+            <div class="status-step rejected"><div class="status-step-icon"><i class="fas fa-times"></i></div><div class="status-step-label">Rejected</div></div>
+        </div>
+        {% else %}
+        <div class="status-tracker">
+            <div class="status-step {% if current_step >= 0 %}completed{% endif %}"><div class="status-step-icon"><i class="fas fa-{% if current_step >= 0 %}check{% else %}circle{% endif %}"></i></div><div class="status-step-label">Created</div></div>
+            <div class="status-step {% if current_step >= 1 %}completed{% elif current_step == 0 %}active{% endif %}"><div class="status-step-icon"><i class="fas fa-{% if current_step >= 1 %}check{% elif current_step == 0 %}clock{% else %}circle{% endif %}"></i></div><div class="status-step-label">{% if reimb.status == 'NEEDS_CORRECTION' %}Correction{% else %}Review{% endif %}</div></div>
+            <div class="status-step {% if current_step >= 2 %}completed{% elif current_step == 1 %}active{% endif %}"><div class="status-step-icon"><i class="fas fa-{% if current_step >= 2 %}check{% else %}circle{% endif %}"></i></div><div class="status-step-label">Approved</div></div>
+            <div class="status-step {% if current_step >= 3 %}completed{% elif current_step == 2 %}active{% endif %}"><div class="status-step-icon"><i class="fas fa-{% if current_step >= 3 %}check{% else %}circle{% endif %}"></i></div><div class="status-step-label">Processing</div></div>
+            <div class="status-step {% if current_step >= 4 %}completed{% elif current_step == 3 %}active{% endif %}"><div class="status-step-icon"><i class="fas fa-{% if current_step >= 4 %}check{% else %}circle{% endif %}"></i></div><div class="status-step-label">Reimbursed</div></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-lg);">
+    <div>
+        <!-- Employee & Expense Info -->
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-user"></i> Employee Information</h3></div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">{{ reimb.employee.name }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Employee ID</div><div class="detail-value">{{ reimb.employee.employee_id }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Department</div><div class="detail-value">{{ reimb.department.name if reimb.department else '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Designation</div><div class="detail-value">{{ reimb.employee.designation or '—' }}</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-receipt"></i> Expense Information</h3></div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-item"><div class="detail-label">Category</div><div class="detail-value">{{ reimb.category.name if reimb.category else '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Expense Date</div><div class="detail-value">{{ reimb.expense_date.strftime('%d %b %Y') if reimb.expense_date else '—' }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Amount</div><div class="detail-value amount">₹{{ '{:,.2f}'.format(reimb.amount) }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Payment Method</div><div class="detail-value">{{ reimb.payment_method or '—' }}</div></div>
+                </div>
+                <div class="detail-item" style="margin-top: 0.5rem;">
+                    <div class="detail-label">Purpose / Description</div>
+                    <div class="detail-value">{{ reimb.description or '—' }}</div>
+                </div>
+            </div>
+        </div>
+
+        {% if reimb.status == 'REJECTED' and reimb.rejection_reason %}
+        <div class="card" style="border-color: var(--danger-border);">
+            <div class="card-header" style="background: var(--danger-bg);"><h3 class="card-title" style="color: var(--danger);"><i class="fas fa-times-circle"></i> Rejection Reason</h3></div>
+            <div class="card-body"><p>{{ reimb.rejection_reason }}</p></div>
+        </div>
+        {% endif %}
+
+        {% if reimb.status == 'NEEDS_CORRECTION' and reimb.correction_comment %}
+        <div class="card" style="border-color: var(--warning-border);">
+            <div class="card-header" style="background: var(--warning-bg);"><h3 class="card-title" style="color: #92400e;"><i class="fas fa-exclamation-triangle"></i> Correction Required</h3></div>
+            <div class="card-body"><p>{{ reimb.correction_comment }}</p></div>
+        </div>
+        {% endif %}
+
+        <!-- Documents -->
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-paperclip"></i> Documents</h3></div>
+            <div class="card-body">
+                {% if documents %}
+                    {% for doc in documents %}
+                    <div class="file-item">
+                        <i class="fas {% if doc.is_pdf %}fa-file-pdf{% else %}fa-file-image{% endif %}" style="font-size: 1.2rem; color: var(--primary);"></i>
+                        <div class="file-item-info">
+                            <div class="file-item-name">{{ doc.original_filename }}</div>
+                            <div class="file-item-size">{{ doc.size_display }} &middot; {{ doc.file_type|upper }}</div>
+                        </div>
+                        <a href="{{ url_for('employee.view_document', doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline"><i class="fas fa-eye"></i> View</a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No documents uploaded.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- OCR Information -->
+        {% if ocr_results %}
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-magic"></i> OCR Information</h3></div>
+            <div class="card-body">
+                {% for ocr in ocr_results %}
+                <div style="margin-bottom: 1rem; padding: 1rem; background: var(--bg-main); border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                        <span class="badge badge-{% if ocr.is_completed %}success{% elif ocr.is_failed %}danger{% else %}warning{% endif %}">
+                            {{ ocr.processing_status }}
+                        </span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Engine: {{ ocr.ocr_engine or '—' }}</span>
+                    </div>
+                    {% if ocr.extracted_data %}
+                    <div class="detail-grid">
+                        {% for key, value in ocr.extracted_data.items() %}
+                        {% if value %}
+                        <div class="detail-item">
+                            <div class="detail-label">{{ key.replace('_', ' ').title() }}</div>
+                            <div class="detail-value">{{ value }}</div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if ocr.error_message %}
+                    <p style="color: var(--danger); font-size: 0.8125rem; margin-top: 0.5rem;">{{ ocr.error_message }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <p style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">
+                    <i class="fas fa-info-circle"></i> OCR data is automatically extracted and may contain errors. The original document is the authoritative source.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Payment Info (if reimbursed) -->
+        {% if reimb.payment %}
+        <div class="card" style="border-color: var(--success-border);">
+            <div class="card-header" style="background: var(--success-bg);"><h3 class="card-title" style="color: var(--success);"><i class="fas fa-money-bill-wave"></i> Payment Information</h3></div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-item"><div class="detail-label">Amount Paid</div><div class="detail-value amount">₹{{ '{:,.2f}'.format(reimb.payment.amount) }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Payment Date</div><div class="detail-value">{{ reimb.payment.payment_date.strftime('%d %b %Y') }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Payment Method</div><div class="detail-value">{{ reimb.payment.payment_method }}</div></div>
+                    <div class="detail-item"><div class="detail-label">Reference</div><div class="detail-value">{{ reimb.payment.transaction_reference or '—' }}</div></div>
+                </div>
+                {% if reimb.payment.remarks %}
+                <div class="detail-item" style="margin-top: 0.5rem;"><div class="detail-label">Remarks</div><div class="detail-value">{{ reimb.payment.remarks }}</div></div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Approval Timeline -->
+    <div>
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-history"></i> Approval Timeline</h3></div>
+            <div class="card-body">
+                {% if reimb.approval_history %}
+                <div class="timeline">
+                    {% for entry in reimb.approval_history|reverse %}
+                    <div class="timeline-item">
+                        <div class="timeline-dot {{ entry.action_color }}"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">{{ entry.action_label }}</div>
+                            <div class="timeline-meta">
+                                {{ entry.performer.name if entry.performer else 'System' }}
+                                &middot; {{ entry.created_at.strftime('%d %b %Y, %H:%M') }}
+                            </div>
+                            {% if entry.comments %}
+                            <div class="timeline-comment">{{ entry.comments }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No history yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <a href="{{ url_for('employee.my_requests') }}" class="btn btn-outline w-100">
+            <i class="fas fa-arrow-left"></i> Back to My Requests
+        </a>
+    </div>
+</div>
+{% endblock %}

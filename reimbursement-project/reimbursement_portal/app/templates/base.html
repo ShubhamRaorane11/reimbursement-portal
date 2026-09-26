@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Internal Corporate Employee Reimbursement Management Portal">
+    <title>{% block title %}Reimbursement Portal{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Overlay (mobile) -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <div class="brand-text">
+                    ReimbursePro
+                    <small>Management Portal</small>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                {% if current_user %}
+                    {% if current_user.role == 'EMPLOYEE' %}
+                        <!-- Employee Navigation -->
+                        <div class="sidebar-section">
+                            <div class="sidebar-section-title">Main</div>
+                        </div>
+                        <a href="{{ url_for('employee.dashboard') }}" class="nav-item {% if request.endpoint == 'employee.dashboard' %}active{% endif %}">
+                            <i class="fas fa-th-large"></i> Dashboard
+                        </a>
+                        <a href="{{ url_for('employee.my_requests') }}" class="nav-item {% if request.endpoint == 'employee.my_requests' %}active{% endif %}">
+                            <i class="fas fa-file-alt"></i> My Reimbursements
+                        </a>
+                        <a href="{{ url_for('employee.new_request') }}" class="nav-item {% if request.endpoint == 'employee.new_request' %}active{% endif %}">
+                            <i class="fas fa-plus-circle"></i> New Request
+                        </a>
+
+                        <div class="sidebar-section" style="margin-top: 1rem;">
+                            <div class="sidebar-section-title">Account</div>
+                        </div>
+                        <a href="{{ url_for('employee.notifications') }}" class="nav-item {% if request.endpoint == 'employee.notifications' %}active{% endif %}">
+                            <i class="fas fa-bell"></i> Notifications
+                            {% if unread_notifications > 0 %}
+                                <span class="badge">{{ unread_notifications }}</span>
+                            {% endif %}
+                        </a>
+
+                    {% elif current_user.role == 'APPROVER' %}
+                        <!-- Approver Navigation -->
+                        <div class="sidebar-section">
+                            <div class="sidebar-section-title">Main</div>
+                        </div>
+                        <a href="{{ url_for('approver.dashboard') }}" class="nav-item {% if request.endpoint == 'approver.dashboard' %}active{% endif %}">
+                            <i class="fas fa-th-large"></i> Dashboard
+                        </a>
+                        <a href="{{ url_for('approver.pending_requests') }}" class="nav-item {% if request.endpoint == 'approver.pending_requests' %}active{% endif %}">
+                            <i class="fas fa-clock"></i> Pending Requests
+                        </a>
+                        <a href="{{ url_for('approver.all_requests') }}" class="nav-item {% if request.endpoint == 'approver.all_requests' %}active{% endif %}">
+                            <i class="fas fa-list"></i> All Requests
+                        </a>
+
+                        <div class="sidebar-section" style="margin-top: 1rem;">
+                            <div class="sidebar-section-title">Account</div>
+                        </div>
+                        <a href="{{ url_for('approver.notifications') }}" class="nav-item {% if request.endpoint == 'approver.notifications' %}active{% endif %}">
+                            <i class="fas fa-bell"></i> Notifications
+                            {% if unread_notifications > 0 %}
+                                <span class="badge">{{ unread_notifications }}</span>
+                            {% endif %}
+                        </a>
+
+                    {% elif current_user.role == 'FINANCE' %}
+                        <!-- Finance Navigation -->
+                        <div class="sidebar-section">
+                            <div class="sidebar-section-title">Main</div>
+                        </div>
+                        <a href="{{ url_for('finance.dashboard') }}" class="nav-item {% if request.endpoint == 'finance.dashboard' %}active{% endif %}">
+                            <i class="fas fa-th-large"></i> Dashboard
+                        </a>
+                        <a href="{{ url_for('finance.approved_list') }}" class="nav-item {% if request.endpoint == 'finance.approved_list' %}active{% endif %}">
+                            <i class="fas fa-check-circle"></i> Approved
+                        </a>
+                        <a href="{{ url_for('finance.processing_list') }}" class="nav-item {% if request.endpoint == 'finance.processing_list' %}active{% endif %}">
+                            <i class="fas fa-cog"></i> Processing
+                        </a>
+                        <a href="{{ url_for('finance.reimbursed_list') }}" class="nav-item {% if request.endpoint == 'finance.reimbursed_list' %}active{% endif %}">
+                            <i class="fas fa-money-bill-wave"></i> Reimbursed
+                        </a>
+
+                        <div class="sidebar-section" style="margin-top: 1rem;">
+                            <div class="sidebar-section-title">Account</div>
+                        </div>
+                        <a href="{{ url_for('finance.notifications') }}" class="nav-item {% if request.endpoint == 'finance.notifications' %}active{% endif %}">
+                            <i class="fas fa-bell"></i> Notifications
+                            {% if unread_notifications > 0 %}
+                                <span class="badge">{{ unread_notifications }}</span>
+                            {% endif %}
+                        </a>
+
+                    {% elif current_user.role == 'ADMIN' %}
+                        <!-- Admin Navigation -->
+                        <div class="sidebar-section">
+                            <div class="sidebar-section-title">Main</div>
+                        </div>
+                        <a href="{{ url_for('admin.dashboard') }}" class="nav-item {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+                            <i class="fas fa-th-large"></i> Dashboard
+                        </a>
+                        <a href="{{ url_for('admin.all_requests') }}" class="nav-item {% if request.endpoint == 'admin.all_requests' %}active{% endif %}">
+                            <i class="fas fa-list"></i> All Requests
+                        </a>
+
+                        <div class="sidebar-section" style="margin-top: 1rem;">
+                            <div class="sidebar-section-title">Management</div>
+                        </div>
+                        <a href="{{ url_for('admin.employees') }}" class="nav-item {% if request.endpoint == 'admin.employees' %}active{% endif %}">
+                            <i class="fas fa-users"></i> Employees
+                        </a>
+                        <a href="{{ url_for('admin.departments') }}" class="nav-item {% if request.endpoint == 'admin.departments' %}active{% endif %}">
+                            <i class="fas fa-building"></i> Departments
+                        </a>
+                        <a href="{{ url_for('admin.categories') }}" class="nav-item {% if request.endpoint == 'admin.categories' %}active{% endif %}">
+                            <i class="fas fa-tags"></i> Categories
+                        </a>
+                        <a href="{{ url_for('admin.settings') }}" class="nav-item {% if request.endpoint == 'admin.settings' %}active{% endif %}">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+
+                        <div class="sidebar-section" style="margin-top: 1rem;">
+                            <div class="sidebar-section-title">Account</div>
+                        </div>
+                        <a href="{{ url_for('admin.notifications') }}" class="nav-item {% if request.endpoint == 'admin.notifications' %}active{% endif %}">
+                            <i class="fas fa-bell"></i> Notifications
+                            {% if unread_notifications > 0 %}
+                                <span class="badge">{{ unread_notifications }}</span>
+                            {% endif %}
+                        </a>
+                    {% endif %}
+                {% endif %}
+            </nav>
+
+            {% if current_user %}
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="sidebar-user-avatar">
+                        {{ current_user.name[0] }}
+                    </div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name">{{ current_user.name }}</div>
+                        <div class="sidebar-user-role">{{ current_user.role }}</div>
+                    </div>
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="nav-item" style="padding-left: 0; margin-top: 0.5rem;">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+            {% endif %}
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()" id="mobileMenuBtn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2 class="topbar-title">{% block page_title %}Dashboard{% endblock %}</h2>
+                </div>
+                <div class="topbar-right">
+                    {% if current_user %}
+                    {% if current_user.role == 'EMPLOYEE' %}
+                        {% set notif_link = url_for('employee.notifications') %}
+                    {% elif current_user.role == 'APPROVER' %}
+                        {% set notif_link = url_for('approver.notifications') %}
+                    {% elif current_user.role == 'FINANCE' %}
+                        {% set notif_link = url_for('finance.notifications') %}
+                    {% else %}
+                        {% set notif_link = url_for('admin.notifications') %}
+                    {% endif %}
+                    <a href="{{ notif_link }}" class="notification-bell" title="Notifications">
+                        <i class="fas fa-bell"></i>
+                        {% if unread_notifications > 0 %}
+                            <span class="notif-count">{{ unread_notifications }}</span>
+                        {% endif %}
+                    </a>
+                    {% endif %}
+                </div>
+            </header>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+                        {{ message }}
+                        <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Page Content -->
+            <main class="page-content">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- App JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

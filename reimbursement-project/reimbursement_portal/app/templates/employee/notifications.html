@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Notifications — ReimbursePro{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-bell"></i> All Notifications</h3>
+        {% if unread_notifications > 0 %}
+        <form method="POST" action="{{ url_for(request.endpoint.rsplit('.', 1)[0] + '.mark_notifications_read') }}">
+            <button type="submit" class="btn btn-sm btn-outline">
+                <i class="fas fa-check-double"></i> Mark All Read
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if notifications.items %}
+            {% for n in notifications.items %}
+            <div class="notification-item {% if not n.is_read %}unread{% endif %}">
+                <div class="notification-icon" style="background: var(--{{ n.type_color }}-bg, var(--secondary-bg)); color: var(--{{ n.type_color }}, var(--secondary));">
+                    <i class="fas {{ n.type_icon }}"></i>
+                </div>
+                <div class="notification-body">
+                    <div class="notification-message">{{ n.message }}</div>
+                    <div class="notification-time">{{ n.created_at.strftime('%d %b %Y at %H:%M') }}</div>
+                </div>
+                {% if not n.is_read %}
+                <button class="btn btn-sm btn-outline" onclick="markRead({{ n.id }})" title="Mark as read">
+                    <i class="fas fa-check"></i>
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            {% if notifications.pages > 1 %}
+            <div class="pagination" style="padding: 1rem;">
+                {% if notifications.has_prev %}
+                <a href="?page={{ notifications.prev_num }}"><i class="fas fa-chevron-left"></i></a>
+                {% endif %}
+                {% for p in notifications.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <a href="?page={{ p }}" class="{% if p == notifications.page %}active{% endif %}">{{ p }}</a>
+                    {% else %}<span>...</span>{% endif %}
+                {% endfor %}
+                {% if notifications.has_next %}
+                <a href="?page={{ notifications.next_num }}"><i class="fas fa-chevron-right"></i></a>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-bell-slash"></i>
+            <h3>No notifications</h3>
+            <p>You're all caught up!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function markRead(notifId) {
+    const endpoint = window.location.pathname.split('/')[1];
+    fetch(`/${endpoint}/notifications/${notifId}/read`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).then(() => location.reload());
+}
+</script>
+{% endblock %}

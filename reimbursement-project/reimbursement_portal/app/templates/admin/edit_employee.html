@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ user.name }} — ReimbursePro{% endblock %}
+{% block page_title %}Edit Employee{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h3 class="card-title"><i class="fas fa-user-edit"></i> Edit Employee — {{ user.employee_id }}</h3></div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Employee ID</label>
+                    <input type="text" class="form-control" value="{{ user.employee_id }}" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Full Name <span class="required">*</span></label>
+                    <input type="text" class="form-control" name="name" value="{{ user.name }}" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Email <span class="required">*</span></label>
+                    <input type="email" class="form-control" name="email" value="{{ user.email }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Designation</label>
+                    <input type="text" class="form-control" name="designation" value="{{ user.designation or '' }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Department</label>
+                    <select class="form-control" name="department_id">
+                        <option value="">None</option>
+                        {% for d in departments %}
+                        <option value="{{ d.id }}" {% if user.department_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select class="form-control" name="role">
+                        <option value="EMPLOYEE" {% if user.role == 'EMPLOYEE' %}selected{% endif %}>Employee</option>
+                        <option value="APPROVER" {% if user.role == 'APPROVER' %}selected{% endif %}>Approver</option>
+                        <option value="FINANCE" {% if user.role == 'FINANCE' %}selected{% endif %}>Finance</option>
+                        <option value="ADMIN" {% if user.role == 'ADMIN' %}selected{% endif %}>Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="btn-group" style="margin-top: 1rem;">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                <a href="{{ url_for('admin.employees') }}" class="btn btn-outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

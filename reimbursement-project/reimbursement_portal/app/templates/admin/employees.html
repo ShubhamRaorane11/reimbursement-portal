@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Employees — ReimbursePro{% endblock %}
+{% block page_title %}Employee Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <div class="filter-bar">
+            <form method="GET" class="filter-bar" style="flex: 1;">
+                <div class="search-input">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="form-control" name="search" placeholder="Search by name, ID, or email..." value="{{ search }}">
+                </div>
+                <select class="form-control" name="role">
+                    <option value="">All Roles</option>
+                    <option value="EMPLOYEE" {% if role_filter == 'EMPLOYEE' %}selected{% endif %}>Employee</option>
+                    <option value="APPROVER" {% if role_filter == 'APPROVER' %}selected{% endif %}>Approver</option>
+                    <option value="FINANCE" {% if role_filter == 'FINANCE' %}selected{% endif %}>Finance</option>
+                    <option value="ADMIN" {% if role_filter == 'ADMIN' %}selected{% endif %}>Admin</option>
+                </select>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> Filter</button>
+            </form>
+            <button class="btn btn-primary btn-sm" onclick="showModal('addEmployeeModal')"><i class="fas fa-plus"></i> Add Employee</button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Employees</h3></div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Department</th>
+                        <th>Designation</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in employees %}
+                    <tr>
+                        <td><strong>{{ emp.employee_id }}</strong></td>
+                        <td>{{ emp.name }}</td>
+                        <td>{{ emp.email }}</td>
+                        <td>{{ emp.department.name if emp.department else '—' }}</td>
+                        <td>{{ emp.designation or '—' }}</td>
+                        <td><span class="badge badge-info">{{ emp.role }}</span></td>
+                        <td><span class="badge badge-{% if emp.status == 'ACTIVE' %}success{% else %}secondary{% endif %}">{{ emp.status }}</span></td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('admin.edit_employee', user_id=emp.id) }}" class="btn btn-sm btn-outline" title="Edit"><i class="fas fa-edit"></i></a>
+                                <form method="POST" action="{{ url_for('admin.toggle_employee', user_id=emp.id) }}" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm {% if emp.status == 'ACTIVE' %}btn-danger{% else %}btn-success{% endif %}" title="{% if emp.status == 'ACTIVE' %}Deactivate{% else %}Activate{% endif %}" onclick="return confirm('{% if emp.status == 'ACTIVE' %}Deactivate{% else %}Activate{% endif %} {{ emp.name }}?')">
+                                        <i class="fas fa-{% if emp.status == 'ACTIVE' %}ban{% else %}check{% endif %}"></i>
+                                    </button>
+                                </form>
+                                <button class="btn btn-sm btn-outline" onclick="showResetModal({{ emp.id }}, '{{ emp.name }}')" title="Reset Password"><i class="fas fa-key"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if pagination.pages > 1 %}
+        <div class="pagination" style="padding: 1rem;">
+            {% if pagination.has_prev %}<a href="?page={{ pagination.prev_num }}&search={{ search }}&role={{ role_filter }}"><i class="fas fa-chevron-left"></i></a>{% endif %}
+            {% for p in pagination.iter_pages() %}{% if p %}<a href="?page={{ p }}&search={{ search }}&role={{ role_filter }}" class="{% if p == pagination.page %}active{% endif %}">{{ p }}</a>{% else %}<span>...</span>{% endif %}{% endfor %}
+            {% if pagination.has_next %}<a href="?page={{ pagination.next_num }}&search={{ search }}&role={{ role_filter }}"><i class="fas fa-chevron-right"></i></a>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Employee Modal -->
+<div class="modal-overlay" id="addEmployeeModal">
+    <div class="modal">
+        <div class="modal-header"><h3 class="modal-title"><i class="fas fa-user-plus"></i> Add Employee</h3><button class="modal-close" onclick="hideModal('addEmployeeModal')">&times;</button></div>
+        <form method="POST" action="{{ url_for('admin.add_employee') }}">
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Employee ID <span class="required">*</span></label><input type="text" class="form-control" name="employee_id" required placeholder="e.g. EMP006"></div>
+                <div class="form-group"><label class="form-label">Full Name <span class="required">*</span></label><input type="text" class="form-control" name="name" required></div>
+                <div class="form-group"><label class="form-label">Email <span class="required">*</span></label><input type="email" class="form-control" name="email" required></div>
+                <div class="form-group"><label class="form-label">Password <span class="required">*</span></label><input type="password" class="form-control" name="password" required minlength="6"></div>
+                <div class="form-group"><label class="form-label">Department</label><select class="form-control" name="department_id"><option value="">Select</option>{% for d in departments %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}</select></div>
+                <div class="form-group"><label class="form-label">Designation</label><input type="text" class="form-control" name="designation"></div>
+                <div class="form-group"><label class="form-label">Role</label><select class="form-control" name="role"><option value="EMPLOYEE">Employee</option><option value="APPROVER">Approver</option><option value="FINANCE">Finance</option><option value="ADMIN">Admin</option></select></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="hideModal('addEmployeeModal')">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add Employee</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-overlay" id="resetPasswordModal">
+    <div class="modal">
+        <div class="modal-header"><h3 class="modal-title"><i class="fas fa-key"></i> Reset Password</h3><button class="modal-close" onclick="hideModal('resetPasswordModal')">&times;</button></div>
+        <form method="POST" id="resetPasswordForm">
+            <div class="modal-body">
+                <p>Reset password for <strong id="resetUserName"></strong>?</p>
+                <div class="form-group"><label class="form-label">New Password <span class="required">*</span></label><input type="password" class="form-control" name="password" required minlength="6"></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="hideModal('resetPasswordModal')">Cancel</button><button type="submit" class="btn btn-primary">Reset Password</button></div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showModal(id) { document.getElementById(id).classList.add('active'); }
+function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+function showResetModal(userId, name) {
+    document.getElementById('resetUserName').textContent = name;
+    document.getElementById('resetPasswordForm').action = '/admin/employees/' + userId + '/reset-password';
+    showModal('resetPasswordModal');
+}
+</script>
+{% endblock %}
